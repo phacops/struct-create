@@ -13,11 +13,11 @@ import (
 )
 
 var defaults = Configuration{
-	DbUser: "db_user",
+	DbUser:     "db_user",
 	DbPassword: "db_pw",
-	DbName: "bd_name",
-	PkgName: "DbStructs",
-	TagLabel: "db",
+	DbName:     "bd_name",
+	PkgName:    "DbStructs",
+	TagLabel:   "db",
 }
 
 var config Configuration
@@ -179,7 +179,7 @@ var configFile = flag.String("json", "", "Config file")
 
 func main() {
 	flag.Parse()
-	
+
 	if len(*configFile) > 0 {
 		f, err := os.Open(*configFile)
 		if err != nil {

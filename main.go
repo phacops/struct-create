@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -45,25 +46,17 @@ type ColumnSchema struct {
 }
 
 func writeStructs(schemas []ColumnSchema) (int, error) {
-	file, err := os.Create("db_structs.go")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
+	var buffer bytes.Buffer
 
 	currentTable := ""
-
 	neededImports := make(map[string]bool)
 
-	// First, get body text into var out
-	out := ""
 	for _, cs := range schemas {
-
 		if cs.TableName != currentTable {
 			if currentTable != "" {
-				out = out + "}\n\n"
+				buffer.WriteString("}\n\n")
 			}
-			out = out + "type " + formatName(cs.TableName) + " struct{\n"
+			buffer.WriteString("type " + formatName(cs.TableName) + " struct{\n")
 		}
 
 		goType, requiredImport, err := goType(&cs)
@@ -74,31 +67,51 @@ func writeStructs(schemas []ColumnSchema) (int, error) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		out = out + "\t" + formatName(cs.ColumnName) + " " + goType
+
+		buffer.WriteString("\t" + formatName(cs.ColumnName) + " " + goType)
+
 		if len(config.TagLabel) > 0 {
-			out = out + "\t`" + config.TagLabel + ":\"" + cs.ColumnName + "\"`"
+			buffer.WriteString("\t`" + config.TagLabel + ":\"" + cs.ColumnName + "\"`")
 		}
-		out = out + "\n"
+
+		buffer.WriteString("\n")
+
 		currentTable = cs.TableName
 
 	}
-	out = out + "}"
+
+	buffer.WriteString("}")
 
 	// Now add the header section
-	header := "package " + config.PkgName + "\n\n"
+	header := bytes.NewBufferString("package " + config.PkgName + "\n\n")
+
 	if len(neededImports) > 0 {
-		header = header + "import (\n"
+		header.WriteString("import (\n")
+
 		for imp := range neededImports {
-			header = header + "\t\"" + imp + "\"\n"
+			header.WriteString("\t\"" + imp + "\"\n")
 		}
-		header = header + ")\n\n"
+
+		header.WriteString(")\n\n")
 	}
 
-	totalBytes, err := fmt.Fprint(file, header+out)
-	if err != nil {
-		log.Fatal(err)
+	header.Write(buffer.Bytes())
+
+	fileLength := header.Len()
+
+	if fileLength > 0 {
+		file, err := os.Create("db_structs.go")
+
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		defer file.Close()
+
+		header.WriteTo(file)
 	}
-	return totalBytes, nil
+
+	return fileLength, nil
 }
 
 func getSchema() []ColumnSchema {

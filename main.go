@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -104,17 +103,17 @@ func writeStructs(schemas []ColumnSchema) (int, error) {
 	fileLength := header.Len()
 
 	if fileLength > 0 {
-		var file io.Writer
+		var file *os.File
+		var err error
 
 		if *output != "-" {
-			file, err := os.Create("db_structs.go")
+			file, err = os.Create(*output)
 
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			defer file.Close()
-
 		} else {
 			file = os.Stdout
 		}

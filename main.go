@@ -13,6 +13,8 @@ import (
 )
 
 var defaults = Configuration{
+	Host:       "localhost",
+	Port:       3306,
 	DbUser:     "db_user",
 	DbPassword: "db_pw",
 	DbName:     "bd_name",
@@ -23,6 +25,8 @@ var defaults = Configuration{
 var config Configuration
 
 type Configuration struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
 	DbUser     string `json:"db_user"`
 	DbPassword string `json:"db_password"`
 	DbName     string `json:"db_name"`
@@ -102,11 +106,20 @@ func writeStructs(schemas []ColumnSchema) (int, error) {
 }
 
 func getSchema() []ColumnSchema {
-	conn, err := sql.Open("mysql", config.DbUser+":"+config.DbPassword+"@/information_schema")
+	var host string
+
+	if len(config.Host) > 0 && config.Port > 0 {
+		host = fmt.Sprintf("tcp(%s:%d)", config.Host, config.Port)
+	}
+
+	conn, err := sql.Open("mysql", config.DbUser+":"+config.DbPassword+"@"+host+"/information_schema")
+
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	defer conn.Close()
+
 	q := "SELECT TABLE_NAME, COLUMN_NAME, IS_NULLABLE, DATA_TYPE, " +
 		"CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, COLUMN_TYPE, " +
 		"COLUMN_KEY FROM COLUMNS WHERE TABLE_SCHEMA = ? ORDER BY TABLE_NAME, ORDINAL_POSITION"

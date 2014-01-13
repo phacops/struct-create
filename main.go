@@ -222,5 +222,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Ok %d\n", bytes)
+
+	if *output != "-" {
+		fmt.Printf("Ok %d\n", bytes)
+	}
 }

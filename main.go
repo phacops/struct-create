@@ -8,20 +8,24 @@ import (
 	"flag"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"io"
 	"log"
 	"os"
 	"strings"
 )
 
-var defaults = Configuration{
-	DbUser:     "db_user",
-	DbPassword: "db_pw",
-	DbName:     "bd_name",
-	PkgName:    "DbStructs",
-	TagLabel:   "db",
-}
-
-var config Configuration
+var (
+	config   Configuration
+	defaults = Configuration{
+		DbUser:     "db_user",
+		DbPassword: "db_pw",
+		DbName:     "bd_name",
+		PkgName:    "DbStructs",
+		TagLabel:   "db",
+	}
+	configFile = flag.String("json", "", "Config file")
+	output     = flag.String("out", "-", "Output")
+)
 
 type Configuration struct {
 	DbUser     string `json:"db_user"`
@@ -100,13 +104,20 @@ func writeStructs(schemas []ColumnSchema) (int, error) {
 	fileLength := header.Len()
 
 	if fileLength > 0 {
-		file, err := os.Create("db_structs.go")
+		var file io.Writer
 
-		if err != nil {
-			log.Fatal(err)
+		if *output != "-" {
+			file, err := os.Create("db_structs.go")
+
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			defer file.Close()
+
+		} else {
+			file = os.Stdout
 		}
-
-		defer file.Close()
 
 		header.WriteTo(file)
 	}
@@ -189,8 +200,6 @@ func goType(col *ColumnSchema) (string, string, error) {
 	}
 	return gt, requiredImport, nil
 }
-
-var configFile = flag.String("json", "", "Config file")
 
 func main() {
 	flag.Parse()
